@@ -2,6 +2,9 @@ use strict;
 use warnings;
 
 package Type::Attributes;
+
+# ABSTRACT: Types Variables in Perl
+
 use v5.20.0;
 use Variable::Magic qw(wizard cast);
 use Attribute::Handlers;
@@ -10,6 +13,8 @@ use Type::Params    qw(compile);
 use Types::Standard qw(ArrayRef HashRef);
 use Scalar::Util 'refaddr';
 use Carp 'croak';
+
+our $VERSION = '0.05';
 
 sub import {
     my ($class) = @_;
@@ -138,3 +143,21 @@ sub _show_ref {
 }
 
 1;
+
+__END__
+
+=head1 SYNOPSIS
+
+    my $count :Type(ZeroOrPositiveInt) = 3;
+    $count = -2; # fatal
+
+    my @array :Type(Int); # no default value required
+
+    # invalid defaults are fatal
+    my %hash  :Type(NonEmptySimpleStr) = []; # fatal
+
+=head1 DESCRIPTION
+
+Experimental module to attempt to use L<Variable::Magic>,
+L<Attribute::Handlers>, and L<Type::Tiny> to make it transparent to create
+typed variables in Perl.

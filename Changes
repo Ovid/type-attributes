@@ -1,0 +1,5 @@
+Revision history for Type::Attributes
+
+{{$NEXT}}
+
+          - First pass at experimental support for typed variables in Perl
