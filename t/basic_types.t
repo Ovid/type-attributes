@@ -15,7 +15,6 @@ sub show_ref {
     my $var     = shift;
     my $address = refaddr $var;
     my $pad     = peek_my(1);
-    use DDP;
     my $varname = 'Could not determine variable name';
   VAR: foreach my $var ( keys %$pad ) {
         if ( $address == refaddr $pad->{$var} ) {
@@ -23,7 +22,7 @@ sub show_ref {
             last VAR;
         }
     }
-say STDERR sprintf "----> $varname. Decimal: $address Hexadecimal: 0x%x" =>
+    say STDERR sprintf "----> $varname. Decimal: $address Hexadecimal: 0x%x" =>
       $var;
 }
 

@@ -30,8 +30,8 @@ my %ACTIONS_FOR;
 sub Type : ATTR {
     my ( $package, $symbol, $referent, $attr, $data ) = @_;
 
-    _show_ref('$unknown', $referent, $package);
-    _show_ref('%ACTIONS_FOR', \%ACTIONS_FOR);
+    _show_ref( '$unknown', $referent, $package );
+    _show_ref( '%ACTIONS_FOR', \%ACTIONS_FOR );
     if ( exists $ACTIONS_FOR{ refaddr $referent } ) {
 
         # should never happen
@@ -77,7 +77,7 @@ sub _handle_scalar {
         free => sub { delete $ACTIONS_FOR{$address} },
     );
     cast $$referent => $wizard;
-    _show_ref('$scalar_wizard', $wizard);
+    _show_ref( '$scalar_wizard', $wizard );
 }
 
 sub _handle_array {
@@ -99,7 +99,7 @@ sub _handle_array {
         free => sub { delete $ACTIONS_FOR{$address} },
     );
     cast @$referent => $wizard;
-    _show_ref('$array_wizard', $wizard);
+    _show_ref( '$array_wizard', $wizard );
 }
 
 sub _handle_hash {
@@ -120,14 +120,14 @@ sub _handle_hash {
 
     );
     cast %$referent => $wizard;
-    _show_ref('$hash_wizard', $wizard);
+    _show_ref( '$hash_wizard', $wizard );
 }
 
 END {
-    use DDP;
     if ( $ENV{DEBUG_TYPE_ATTRIBUTES} ) {
         foreach my $address ( keys %ACTIONS_FOR ) {
-            # XXX This should never happen, but it 
+
+            # XXX This should never happen, but it
             say STDERR sprintf "Unfreed variable: $address Hexadecimal: 0x%x",
               $address;
         }
@@ -139,7 +139,9 @@ sub _show_ref {
     my ( $name, $var, $package ) = @_;
     $package //= __PACKAGE__;
     my $address = refaddr $var;
-    say STDERR sprintf "====> %s in $package Decimal: $address Hexadecimal: 0x%x" => $name, $var;
+    say STDERR sprintf
+      "====> %s in $package Decimal: $address Hexadecimal: 0x%x" => $name,
+      $var;
 }
 
 1;
