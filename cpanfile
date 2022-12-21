@@ -2,7 +2,6 @@
 
 requires "Attribute::Handlers" => "0";
 requires "Carp" => "0";
-requires "DDP" => "0";
 requires "Scalar::Util" => "0";
 requires "Type::Params" => "0";
 requires "Type::Tiny" => "1.012004";
@@ -35,8 +34,6 @@ on 'develop' => sub {
   requires "File::Spec" => "0";
   requires "IO::Handle" => "0";
   requires "IPC::Open3" => "0";
-  requires "Perl::Critic::Policy::Moose::ProhibitMultipleWiths" => "0";
-  requires "Perl::Critic::Policy::Moose::RequireMakeImmutable" => "0";
   requires "Test::More" => "0";
   requires "Test::Pod" => "1.41";
   requires "version" => "0.77";
