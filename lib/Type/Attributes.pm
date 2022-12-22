@@ -195,7 +195,7 @@ This minimal test case outputs something like:
     Files=1, Tests=2,  0 wallclock secs ( 0.01 usr  0.00 sys +  0.04 cusr  0.01 csys =  0.06 CPU)
     Result: PASS
 
-The C<Attempt to free unreferenced scalar> is a compiler level error.
+The C<Attempt to free unreferenced scalar> is an internal Perl error.
 
 It shows up intermittently (though most of the time), so it's probably a
 global destruction ordering issue. Removing either C<eval> makes the error go
