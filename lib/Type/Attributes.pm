@@ -17,7 +17,6 @@ use Carp 'croak';
 our $VERSION = '0.05';
 
 sub import {
-    my ($class) = @_;
     state $seen = {};
     if ( !$seen->{'Type'}++ ) {
         no warnings;
@@ -25,20 +24,10 @@ sub import {
     }
 }
 
-my %ACTIONS_FOR;
-
 sub Type : ATTR {
     my ( $package, $symbol, $referent, $attr, $data ) = @_;
 
     _show_ref( '$unknown', $referent, $package );
-    _show_ref( '%ACTIONS_FOR', \%ACTIONS_FOR );
-    if ( exists $ACTIONS_FOR{ refaddr $referent } ) {
-
-        # should never happen
-        my $address = refaddr $referent;
-        croak("PANIC: type assigning already made for variable at $referent");
-    }
-
     my $type     = _extract_type($data);
     my %dispatch = (
         SCALAR => \&_handle_scalar,
@@ -63,18 +52,13 @@ sub _extract_type {
 
 sub _handle_scalar {
     my ( $type, $referent ) = @_;
-    my $address = refaddr $referent;
 
-    $ACTIONS_FOR{$address} = {
+    my $wizard = wizard(
         set => sub {
             my $value = shift;
             state $check = compile($type);
             $check->($$value);
         },
-    };
-    my $wizard = wizard(
-        set  => $ACTIONS_FOR{$address}{set},
-        free => sub { delete $ACTIONS_FOR{$address} },
     );
     cast $$referent => $wizard;
     _show_ref( '$scalar_wizard', $wizard );
@@ -82,21 +66,15 @@ sub _handle_scalar {
 
 sub _handle_array {
     my ( $type, $referent ) = @_;
-    my $address = refaddr $referent;
 
-    $ACTIONS_FOR{$address} = {
+# tried various keys such as "get len clear copy dup local fetch store exists delete"
+# and none seemd to cover the case of $foo[$i] = $val.
+    my $wizard = wizard(
         set => sub {
             my $value = shift;
             state $check = compile( ArrayRef [$type] );
             $check->($value);
         },
-    };
-
-# tried various keys such as "get len clear copy dup local fetch store exists delete"
-# and none seemd to cover the case of $foo[$i] = $val.
-    my $wizard = wizard(
-        set  => $ACTIONS_FOR{$address}{set},
-        free => sub { delete $ACTIONS_FOR{$address} },
     );
     cast @$referent => $wizard;
     _show_ref( '$array_wizard', $wizard );
@@ -104,34 +82,16 @@ sub _handle_array {
 
 sub _handle_hash {
     my ( $type, $referent ) = @_;
-    my $address = refaddr $referent;
 
-    $ACTIONS_FOR{$address} = {
+    my $wizard = wizard(
         store => sub {
             my $value = shift;
             state $check = compile( HashRef [$type] );
             $check->($value);
         },
-    };
-
-    my $wizard = wizard(
-        store => $ACTIONS_FOR{$address}{set},
-        free  => sub { delete $ACTIONS_FOR{$address} },
-
     );
     cast %$referent => $wizard;
     _show_ref( '$hash_wizard', $wizard );
-}
-
-END {
-    if ( $ENV{DEBUG_TYPE_ATTRIBUTES} ) {
-        foreach my $address ( keys %ACTIONS_FOR ) {
-
-            # XXX This should never happen, but it
-            say STDERR sprintf "Unfreed variable: $address Hexadecimal: 0x%x",
-              $address;
-        }
-    }
 }
 
 sub _show_ref {
