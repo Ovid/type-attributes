@@ -8,10 +8,11 @@ use Scalar::Util 'refaddr';
 use PadWalker 'peek_my';
 
 BEGIN {
-    $ENV{DEBUG_TYPE_ATTRIBUTES} = 1;
+    $ENV{DEBUG_TYPE_ATTRIBUTES} = 0;
 }
 
 sub show_ref {
+    return unless $ENV{DEBUG_TYPE_ATTRIBUTES};
     my $var     = shift;
     my $address = refaddr $var;
     my $pad     = peek_my(1);
