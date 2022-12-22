@@ -26,60 +26,82 @@ typed variables in Perl.
 
 # DEVELOPMENT NOTES
 
-At the present time, I seem to be hitting the following obstacle:
+At the present time, the `t/error.t` script is this:
 
 ```perl
-    $ prove t/basic_types.t
-    t/basic_types.t .. ====> $unknown in Test::Me Decimal: 5373860072 Hexadecimal: 0x1404e98e8
-    ====> %ACTIONS_FOR in Type::Attributes Decimal: 5234169112 Hexadecimal: 0x137fb1518
-    ====> $scalar_wizard in Type::Attributes Decimal: 5373808976 Hexadecimal: 0x1404dd150
-    ----> $foo. Decimal: 5373860072 Hexadecimal: 0x1404e98e8
-    ====> $unknown in Test::Me Decimal: 5373840144 Hexadecimal: 0x1404e4b10
-    ====> %ACTIONS_FOR in Type::Attributes Decimal: 5234169112 Hexadecimal: 0x137fb1518
-    ====> $scalar_wizard in Type::Attributes Decimal: 5373756680 Hexadecimal: 0x1404d0508
-    ----> $bar. Decimal: 5373840144 Hexadecimal: 0x1404e4b10
-    ====> $unknown in Test::Me Decimal: 5373839472 Hexadecimal: 0x1404e4870
-    ====> %ACTIONS_FOR in Type::Attributes Decimal: 5234169112 Hexadecimal: 0x137fb1518
-    t/basic_types.t .. 1/? ====> $unknown in Test::Me Decimal: 5373839112 Hexadecimal: 0x1404e4708
-    ====> %ACTIONS_FOR in Type::Attributes Decimal: 5234169112 Hexadecimal: 0x137fb1518
-    ====> $array_wizard in Type::Attributes Decimal: 5373763616 Hexadecimal: 0x1404d2020
-    ----> @foo. Decimal: 5373839112 Hexadecimal: 0x1404e4708
-    Unfreed variable: 5373839112 Hexadecimal: 0x1404e4708
-    Attempt to free unreferenced scalar: SV 0x1404deed8 during global destruction.
-    t/basic_types.t .. ok
-    All tests successful.
-    Files=1, Tests=3,  0 wallclock secs ( 0.01 usr  0.00 sys +  0.05 cusr  0.01 csys =  0.07 CPU)
-    Result: PASS
+#!/usr/bin/env perl
+
+use Test::More;
+use Type::Attributes;
+
+my $counter : Type(Int) = 3;
+eval { $counter = 'bar'; 1 };
+ok $@->isa('Error::TypeTiny::Assertion'), 'Bad type';
+
+my @foo : Type(Num) = qw(1 2 3.2);
+eval { @foo = qw(2 bar 4); 1 };
+ok $@->isa('Error::TypeTiny::Assertion'), 'Bad type';
+
+done_testing;
 ```
 
-This line is from the Perl compiler:
+This minimal test case outputs something like:
 
 ```
-    Attempt to free unreferenced scalar: SV 0x1404deed8 during global destruction.
+t/error.t ..
+ok 1 - Bad type
+ok 2 - Bad type
+1..2
+Attempt to free unreferenced scalar: SV 0x11e0cf7e0 during global destruction.
+ok
+All tests successful.
+Files=1, Tests=2,  0 wallclock secs ( 0.01 usr  0.00 sys +  0.04 cusr  0.01 csys =  0.06 CPU)
+Result: PASS
 ```
+
+The `Attempt to free unreferenced scalar` is a compiler level error.
 
 It shows up intermittently (though most of the time), so it's probably a
-global destruction ordering issue. Commenting out the `arrays` subtest makes
-the issue go away.  If I reduce the `arrays` subtest to this (the
-`throws_ok` is needed), the problem comes back:
+global destruction ordering issue. Removing either `eval` makes the error go
+away.
+
+Further, swapping the order of the tests makes the error go away:
 
 ```perl
-subtest 'arrays' => sub {
-    my @foo : Type(Int) = qw(1 2 3);
-    pass;
-    throws_ok { @foo = qw(2 bar 4) }
-      'Error::TypeTiny::Assertion',
-      '... and assigning bad values to the array should fail';
-};
-```
+my @foo : Type(Num) = qw(1 2 3.2);
+eval { @foo = qw(2 bar 4); 1 };
+ok $@->isa('Error::TypeTiny::Assertion'), 'Bad type';
 
-Comment out the `throws_ok` test to verify.
+my $counter : Type(Int) = 3;
+eval { $counter = 'bar'; 1 };
+ok $@->isa('Error::TypeTiny::Assertion'), 'Bad type';
+```
 
 `perl -v`:
 
 ```perl
 This is perl 5, version 26, subversion 3 (v5.26.3) built for darwin-2level
 (with 1 registered patch, see perl -V for more detail)
+```
+
+Also, the following `TODO` test in `t/basic_types.t` is annoying. I wonder
+if this is related.
+
+```
+TODO: {
+      local $TODO = "Direct assignment bypasses Variable::Magic";
+      throws_ok { $foo[1] = 'bar' }
+      'Error::TypeTiny::Assertion',
+        'Assigning an incorrect type to an array entry should fail';
+  }
+```
+
+The above _should_ work because the docs for `set` in [Variable::Magic](https://metacpan.org/pod/Variable%3A%3AMagic) say
+the following:
+
+```perl
+This magic is called each time the value of the variable changes. It is
+called for array subscripts and slices, but never for hashes.
 ```
 
 # AUTHOR
