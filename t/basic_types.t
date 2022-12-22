@@ -1,5 +1,5 @@
 #!/usr/bin/env perl
-package Test::Me;
+
 use lib 'lib';
 use v5.20.0;
 use Test::Most;
@@ -54,32 +54,27 @@ subtest 'scalars' => sub {
 
 subtest 'arrays' => sub {
     my @foo : Type(Int) = qw(1 2 3);
-    pass;
-    #ok @foo, 'We should be able to create a typed array.';
-    #show_ref( \@foo );
-    #eq_or_diff \@foo, [ 1, 2, 3 ], '... and it should have the correct data';
-    #throws_ok { @foo = qw(2 bar 4) }
-    #'Error::TypeTiny::Assertion',
-    #  '... and assinging bad values to the array should fail';
+    ok @foo, 'We should be able to create a typed array.';
+    show_ref( \@foo );
+    eq_or_diff \@foo, [ 1, 2, 3 ], '... and it should have the correct data';
+    throws_ok { @foo = qw(2 bar 4) }
+    'Error::TypeTiny::Assertion',
+      '... and assinging bad values to the array should fail';
 
-    #TODO: {
-    #    local $TODO = "I'm missing something here. Direct assignment seems to work when it should not";
-    #    throws_ok { $foo[1] = 'bar' }
-    #    'Error::TypeTiny::Assertion',
-    #      'Assigning an incorrect type to an array entry should fail';
-    #}
+  TODO: {
+        local $TODO = "Direct assignment bypasses Variable::Magic";
+        throws_ok { $foo[1] = 'bar' }
+        'Error::TypeTiny::Assertion',
+          'Assigning an incorrect type to an array entry should fail';
+    }
 
-    #throws_ok { push @foo => 'this' }
-    #'Error::TypeTiny::Assertion',
-    #  'Pushing an invalid type onto a typed array should fail';
+    throws_ok { push @foo => 'this' }
+    'Error::TypeTiny::Assertion',
+      'Pushing an invalid type onto a typed array should fail';
 };
 
 subtest 'hashes' => sub {
-    pass;
-
-    #my %foo :Type(Int) = (one => 1, two => 'deux');
-    #    explain \%foo;
-    #    explain Scalar::Util::refaddr(\%foo);
+    pass 'We will come back to this after we figure out the array bug';
 };
 
 done_testing;
