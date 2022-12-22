@@ -26,82 +26,54 @@ typed variables in Perl.
 
 # DEVELOPMENT NOTES
 
-At the present time, the `t/error.t` script is this:
+Looks like there's a bug in [Variable::Magic](https://metacpan.org/pod/Variable%3A%3AMagic) with Perl 5.26 and above,
+when using `$@->isa`. Bug filed: [https://rt.cpan.org/Ticket/Display.html?id=145680](https://rt.cpan.org/Ticket/Display.html?id=145680)
+
+Test case, with everything stripped out that I can find.
 
 ```perl
 #!/usr/bin/env perl
 
-use Test::More;
-use Type::Attributes;
+use Variable::Magic qw(wizard cast);
 
-my $counter : Type(Int) = 3;
-eval { $counter = 'bar'; 1 };
-ok $@->isa('Error::TypeTiny::Assertion'), 'Bad type';
+my $use_regex = shift @ARGV;
 
-my @foo : Type(Num) = qw(1 2 3.2);
-eval { @foo = qw(2 bar 4); 1 };
-ok $@->isa('Error::TypeTiny::Assertion'), 'Bad type';
+sub Fake::Exception::throw { die bless {} => shift }
 
-done_testing;
+my $wizard = wizard( set => sub { Fake::Exception->throw } );
+
+my $counter = 3;
+my @foo     = qw(1 2 3.2);
+cast $counter, $wizard;
+cast @foo,     $wizard;
+
+eval { Fake::Exception->throw };
+
+if ($use_regex) {
+    $@ =~ qr/Fake::Exception/;
+}
+else {
+    $@->isa('Fake::Exception');
+}
+
+eval { @foo = qw(2 bar 4) };
+$@->isa('Fake::Exception');
+print "Done\n";
 ```
 
-This minimal test case outputs something like:
+Running that with 5.26 and above on my M1 Mac produces this:
 
 ```
-t/error.t ..
-ok 1 - Bad type
-ok 2 - Bad type
-1..2
-Attempt to free unreferenced scalar: SV 0x11e0cf7e0 during global destruction.
-ok
-All tests successful.
-Files=1, Tests=2,  0 wallclock secs ( 0.01 usr  0.00 sys +  0.04 cusr  0.01 csys =  0.06 CPU)
-Result: PASS
+$ perl testcase.pl
+Done
+Attempt to free unreferenced scalar: SV 0x14401a550 at t/core.t line 27.
 ```
 
-The `Attempt to free unreferenced scalar` is an internal Perl error.
-
-It shows up intermittently (though most of the time), so it's probably a
-global destruction ordering issue. Removing either `eval` makes the error go
-away.
-
-Further, swapping the order of the tests makes the error go away:
-
-```perl
-my @foo : Type(Num) = qw(1 2 3.2);
-eval { @foo = qw(2 bar 4); 1 };
-ok $@->isa('Error::TypeTiny::Assertion'), 'Bad type';
-
-my $counter : Type(Int) = 3;
-eval { $counter = 'bar'; 1 };
-ok $@->isa('Error::TypeTiny::Assertion'), 'Bad type';
-```
-
-`perl -v`:
-
-```perl
-This is perl 5, version 26, subversion 3 (v5.26.3) built for darwin-2level
-(with 1 registered patch, see perl -V for more detail)
-```
-
-Also, the following `TODO` test in `t/basic_types.t` is annoying. I wonder
-if this is related.
+Passing a true value to the script makes the error go away:
 
 ```
-TODO: {
-      local $TODO = "Direct assignment bypasses Variable::Magic";
-      throws_ok { $foo[1] = 'bar' }
-      'Error::TypeTiny::Assertion',
-        'Assigning an incorrect type to an array entry should fail';
-  }
-```
-
-The above _should_ work because the docs for `set` in [Variable::Magic](https://metacpan.org/pod/Variable%3A%3AMagic) say
-the following:
-
-```perl
-This magic is called each time the value of the variable changes. It is
-called for array subscripts and slices, but never for hashes.
+$ perl testcase.pl 1
+Done
 ```
 
 # AUTHOR
