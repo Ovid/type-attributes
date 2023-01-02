@@ -8,9 +8,8 @@ package Type::Attributes;
 use v5.20.0;
 use Variable::Magic qw(wizard cast);
 use Attribute::Handlers;
-use Type::Attributes::Types;
-use Type::Params    qw(compile);
-use Types::Standard qw(ArrayRef HashRef);
+use Types::Common qw(ScalarRef ArrayRef HashRef InstanceOf);
+use Type::Utils qw(dwim_type);
 use Scalar::Util 'refaddr';
 use Carp 'croak';
 
@@ -28,7 +27,7 @@ sub Type : ATTR {
     my ( $package, $symbol, $referent, $attr, $data ) = @_;
 
     _show_ref( '$unknown', $referent, $package );
-    my $type     = _extract_type($data);
+    my $type     = _extract_type( $data, $package );
     my %dispatch = (
         SCALAR => \&_handle_scalar,
         ARRAY  => \&_handle_array,
@@ -40,56 +39,37 @@ sub Type : ATTR {
 }
 
 sub _extract_type {
-
-    # currently this only allows simple types, such as :Type(Int).
-    # We want something much more robust here. For example, we might want:
-    # my @colors :Type(ArrayRef[Enum[qw/red blue green/]])
-    my $data = shift;
-    my $type = Type::Attributes::Types->can( $data->[0] )
-      or croak("Unknown type: $data->[0]");
-    return $type->();
+    my ( $data, $package ) = @_;
+    state $fallbacks = [ qw/ lookup_via_moose lookup_via_mouse / ];
+    eval { dwim_type( $data->[0], for => $package, fallback => $fallbacks ) }
+      or croak( "Unknown type: " . $data->[0] );
 }
 
 sub _handle_scalar {
     my ( $type, $referent ) = @_;
+    my $scalar_type = ScalarRef->of( $type );
 
-    my $wizard = wizard(
-        set => sub {
-            my $value = shift;
-            state $check = compile($type);
-            $check->($$value);
-        },
-    );
+    my $wizard = wizard( set => \&$scalar_type );
     cast $$referent => $wizard;
     _show_ref( '$scalar_wizard', $wizard );
 }
 
 sub _handle_array {
     my ( $type, $referent ) = @_;
+    my $array_type = ArrayRef->of( $type );
 
 # tried various keys such as "get len clear copy dup local fetch store exists delete"
 # and none seemd to cover the case of $foo[$i] = $val.
-    my $wizard = wizard(
-        set => sub {
-            my $value = shift;
-            state $check = compile( ArrayRef [$type] );
-            $check->($value);
-        },
-    );
+    my $wizard = wizard( set => \&$array_type );
     cast @$referent => $wizard;
     _show_ref( '$array_wizard', $wizard );
 }
 
 sub _handle_hash {
     my ( $type, $referent ) = @_;
+    my $hash_type = HashRef->of( $type );
 
-    my $wizard = wizard(
-        store => sub {
-            my $value = shift;
-            state $check = compile( HashRef [$type] );
-            $check->($value);
-        },
-    );
+    my $wizard = wizard( store => \&$hash_type );
     cast %$referent => $wizard;
     _show_ref( '$hash_wizard', $wizard );
 }

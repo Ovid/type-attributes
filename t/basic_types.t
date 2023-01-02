@@ -4,6 +4,7 @@ use lib 'lib';
 use v5.20.0;
 use Test::Most;
 use Type::Attributes;
+use Types::Common qw(Int NegativeInt);
 use Scalar::Util 'refaddr';
 use PadWalker 'peek_my';
 
