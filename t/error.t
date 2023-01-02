@@ -2,6 +2,7 @@
 
 use Test::More;
 use Type::Attributes;
+use Types::Common qw(Int Num);
 
 my $counter : Type(Int) = 3;
 eval { $counter = 'bar'; 1 };
